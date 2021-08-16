@@ -1,0 +1,22 @@
+.player-pointer {
+  width: 20px;
+  height: 20px;
+  background-color: rgb(167, 51, 51);
+  border-radius: 50%;
+  z-index: 99;
+}
+
+.player-character {
+  width: 30px;
+  height: 30px;
+  background-color: rgb(4, 110, 248);
+  z-index: 1;
+}
+
+.bullet {
+  width: 10px;
+  height: 10px;
+  background-color: rgb(141, 83, 196);
+  border-radius: 50%;
+  z-index: 2;
+}
