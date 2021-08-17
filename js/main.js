@@ -1,16 +1,16 @@
-// onmousemove = function(e){console.log("mouse location:", e.clientX, e.clientY)}
-
+// ----- Element declarations -----
 var game = document.getElementById('game');
 
-// Player
+// Player object definition
 var playerDiv = document.createElement('div');
+var playerSpeed = 5;
 playerDiv.setAttribute('id', 'player');
 playerDiv.classList.add('player-character');
 playerDiv.style.position = "absolute";
 playerDiv.style.left = '100px';
 playerDiv.style.top = '100px';
 
-// Pointer
+// Pointer object definition
 var cursorDiv = document.createElement('div');
 cursorDiv.setAttribute('id', 'pointer');
 cursorDiv.classList.add('player-pointer');
@@ -19,13 +19,15 @@ cursorDiv.style.position = "absolute";
 document.body.insertBefore(playerDiv, game);
 document.body.insertBefore(cursorDiv, game);
 
-// Pointer move
+// ----- Pointer move -----
 onmousemove = function(e) {
   cursorDiv.style.left = e.clientX - 10 + 'px';
   cursorDiv.style.top = e.clientY - 10 + 'px';
 }
 
-// Shoot
+// ----- Player shoot -----
+
+// Shoot bullet from the player on mouse click
 var bulletId = 0;
 onclick = function(e) {
   var bulletX = getOffset(playerDiv).left;
@@ -38,8 +40,8 @@ onclick = function(e) {
   bulletId++;
   bullet.classList.add('bullet');
   bullet.style.position = 'fixed';
-  bullet.style.left = bulletX;
-  bullet.style.top = bulletY;
+  bullet.style.left = bulletX + 'px';
+  bullet.style.top = bulletY + 'px';
 
   document.body.insertBefore(bullet, game);
 
@@ -65,6 +67,44 @@ onclick = function(e) {
   );
 }
 
+// ----- Player movement -----
+var keys = {};
+var movementInterval = setInterval(movePlayer, 20);
+
+onkeydown = function(e) {
+  if (e && (e.key == 'w' || e.key == 'a' || e.key == 's' || e.key == 'd')) {
+    keys[e.key] = true;
+  }
+}
+
+onkeyup = function(e) {
+  if (e && (e.key == 'w' || e.key == 'a' || e.key == 's' || e.key == 'd')) {
+    keys[e.key] = false;
+  }
+}
+
+function movePlayer() {
+  for (var key in keys) {
+    if (keys[key]) {
+      if (key == 'w') {
+        playerDiv.style.top = getOffset(playerDiv).top - playerSpeed + 'px';
+      }
+      if (key == 'a') {
+        playerDiv.style.left = getOffset(playerDiv).left - playerSpeed + 'px';
+      }
+      if (key == 's') {
+        playerDiv.style.top = getOffset(playerDiv).top + playerSpeed + 'px';
+      }
+      if (key == 'd') {
+        playerDiv.style.left = getOffset(playerDiv).left + playerSpeed + 'px';
+      }
+    }
+  }
+}
+
+// ----- Utils -----
+
+// Get element X and Y position
 function getOffset(el) {
   const rect = el.getBoundingClientRect();
   return {
