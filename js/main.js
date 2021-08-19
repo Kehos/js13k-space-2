@@ -1,9 +1,16 @@
 // ----- Const declarations -----
 var healthAttribute = 'attr-health';
 var enemyIdPrefix = 'enemy-';
+var gameContainerId = 'game';
+var gameCanvasId = 'gameCanvas';
 
 // ----- Element declarations -----
-var game = document.getElementById('game');
+
+// Game containers
+var gameContainer = document.getElementById(gameContainerId);
+var game = document.getElementById(gameCanvasId);
+var gameBoundaries;
+calcGameBoundaries();
 
 // Player object definition
 var playerDiv = document.createElement('div');
@@ -12,17 +19,20 @@ var playerSpeed = 5;
 playerDiv.setAttribute('id', 'player');
 playerDiv.classList.add('player-character');
 playerDiv.style.position = "absolute";
-playerDiv.style.left = '100px';
-playerDiv.style.top = '100px';
+playerDiv.style.left = getOffset(game).left + 100 + 'px';
+playerDiv.style.top = getOffset(game).top + 100 + 'px';
 
 // Pointer object definition
 var cursorDiv = document.createElement('div');
 cursorDiv.setAttribute('id', 'pointer');
 cursorDiv.classList.add('player-pointer');
-cursorDiv.style.position = "absolute";
+cursorDiv.style.position = "fixed";
 
-document.body.insertBefore(playerDiv, game);
-document.body.insertBefore(cursorDiv, game);
+gameContainer.insertBefore(playerDiv, game);
+gameContainer.insertBefore(cursorDiv, game);
+
+// ----- Window resize event -----
+window.onresize = calcGameBoundaries();
 
 // ----- Pointer move -----
 onmousemove = function(e) {
@@ -48,7 +58,7 @@ onclick = function(e) {
   bullet.style.left = bulletX + 'px';
   bullet.style.top = bulletY + 'px';
 
-  document.body.insertBefore(bullet, game);
+  gameContainer.insertBefore(bullet, game);
 
   // Movement
   var angle = Math.atan2(tagetY - bulletY, targetX - bulletX);
@@ -58,25 +68,23 @@ onclick = function(e) {
   var bulletInterval = setInterval(
     function() {
       if (bullet) {
-        bullet.style.left = (bulletX += deltaX) + 'px';
-        bullet.style.top = (bulletY += deltaY) + 'px';
-      }
+        var newPositionX = bulletX += deltaX;
+        var newPositionY = bulletY += deltaY;
+        if (isValidPosition(newPositionX, newPositionY, bullet)) {
+          bullet.style.left = newPositionX + 'px';
+          bullet.style.top = newPositionY + 'px';
+        } else {
+          removeBullet(bullet, bulletInterval);
+        }
 
-      var enemyCollided = checkEnemyCollision(bullet);
-      if (enemyCollided) {
-        bullet.parentElement.removeChild(bullet);
-        damageEnemy(enemyCollided);
+        // Check bullet collisions
+        var enemyCollided = checkEnemyCollision(bullet);
+        if (enemyCollided) {
+          removeBullet(bullet, bulletInterval);
+          damageEnemy(enemyCollided);
+        }
       }
     }, 10
-  );
-
-  setTimeout(
-    function() {
-      clearInterval(bulletInterval);
-      if (bullet && bullet.parentElement) {
-        bullet.parentElement.removeChild(bullet);
-      }
-    }, 2000
   );
 }
 
@@ -100,16 +108,28 @@ function movePlayer() {
   for (var key in keys) {
     if (keys[key]) {
       if (key == 'w') {
-        playerDiv.style.top = getOffset(playerDiv).top - playerSpeed + 'px';
+        var newPosition = getOffset(playerDiv).top - playerSpeed;
+        if (isValidPosition(getOffset(playerDiv).left, newPosition, playerDiv)) {
+          playerDiv.style.top = newPosition + 'px';
+        }
       }
       if (key == 'a') {
-        playerDiv.style.left = getOffset(playerDiv).left - playerSpeed + 'px';
+        var newPosition = getOffset(playerDiv).left - playerSpeed;
+        if (isValidPosition(newPosition, getOffset(playerDiv).top, playerDiv)) {
+          playerDiv.style.left = newPosition + 'px';
+        }
       }
       if (key == 's') {
-        playerDiv.style.top = getOffset(playerDiv).top + playerSpeed + 'px';
+        var newPosition = getOffset(playerDiv).top + playerSpeed;
+        if (isValidPosition(getOffset(playerDiv).left, newPosition, playerDiv)) {
+          playerDiv.style.top = newPosition + 'px';
+        }
       }
       if (key == 'd') {
-        playerDiv.style.left = getOffset(playerDiv).left + playerSpeed + 'px';
+        var newPosition = getOffset(playerDiv).left + playerSpeed;
+        if (isValidPosition(newPosition, getOffset(playerDiv).top, playerDiv)) {
+          playerDiv.style.left = newPosition + 'px';
+        }
       }
     }
   }
@@ -131,7 +151,7 @@ enemyDiv.style.left = '500px';
 enemyDiv.style.top = '500px';
 enemies.push(enemyDiv);
 
-document.body.insertBefore(enemyDiv, game);
+gameContainer.insertBefore(enemyDiv, game);
 
 // ----- Utils -----
 
@@ -142,6 +162,22 @@ function getOffset(el) {
     left: rect.left + window.scrollX,
     top: rect.top + window.scrollY
   };
+}
+
+// Get boundaries for the game canvas
+function calcGameBoundaries() {
+  gameBoundaries = {
+    minX: getOffset(game).left,
+    maxX: getOffset(game).left + game.offsetWidth,
+    minY: getOffset(game).top,
+    maxY: getOffset(game).top + game.offsetHeight
+  };
+}
+
+// Get if element is inside game boundaries
+function isValidPosition(left, top, element) {
+  return left > gameBoundaries.minX && (left + element.offsetWidth) < gameBoundaries.maxX &&
+    top > gameBoundaries.minY && (top + element.offsetHeight) < gameBoundaries.maxY;
 }
 
 // Checks if a bullet collided with an enemy
@@ -186,5 +222,13 @@ function damageEnemy(enemy) {
     enemies.splice(enemyId, 1);
   } else {
     enemy.setAttribute(healthAttribute, enemyHealth);
+  }
+}
+
+// Remove bullet element from the game
+function removeBullet(bullet, interval) {
+  if (bullet && bullet.parentElement) {
+    bullet.parentElement.removeChild(bullet);
+    clearInterval(interval);
   }
 }

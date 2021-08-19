@@ -1,3 +1,11 @@
+#gameCanvas {
+  width: 600px;
+  height: 600px;
+  border: 5px solid black;
+  margin: 0 auto;
+  position: relative;
+}
+
 .player-pointer {
   width: 20px;
   height: 20px;
