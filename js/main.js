@@ -6,7 +6,10 @@ var gameCanvasId = 'gameCanvas';
 
 // ----- Element declarations -----
 
-// Game containers
+// Game config
+var score = document.getElementById('score');
+var gameScore = 0;
+var timer = document.getElementById('timer');
 var gameContainer = document.getElementById(gameContainerId);
 var game = document.getElementById(gameCanvasId);
 var gameBoundaries;
@@ -30,6 +33,10 @@ cursorDiv.style.position = "fixed";
 
 gameContainer.insertBefore(playerDiv, game);
 gameContainer.insertBefore(cursorDiv, game);
+
+// Enemy portals
+var enemyPortals = document.querySelectorAll('.portal-item');
+var enemyPortalPositions = calcPortalPositions();
 
 // ----- Window resize event -----
 window.onresize = calcGameBoundaries();
@@ -136,22 +143,30 @@ function movePlayer() {
 }
 
 // ----- Enemies spawn -----
-var enemyCounter = 0;
 var enemies = [];
-var maxEnemies = 10;
+var maxEnemies = 5;
 var enemyId = 0;
 
-var enemyDiv = document.createElement('div');
-enemyDiv.setAttribute('id', enemyIdPrefix + enemyId);
-enemyDiv.setAttribute(healthAttribute, 3);
-enemyId++;
-enemyDiv.classList.add('enemy-character');
-enemyDiv.style.position = "absolute";
-enemyDiv.style.left = '500px';
-enemyDiv.style.top = '500px';
-enemies.push(enemyDiv);
+// Spawn an enemy each 2 seconds if there are less tan max enemies into the battlefield
+var enemySpawnInterval = setInterval(spawnEnemy, 2000);
+function spawnEnemy() {
+  if (enemies.length < maxEnemies) {
+    var enemyDiv = document.createElement('div');
+    enemyDiv.setAttribute('id', enemyIdPrefix + enemyId);
+    enemyDiv.setAttribute(healthAttribute, 3);
+    enemyId++;
+    enemyDiv.classList.add('enemy-character');
+    enemyDiv.style.position = "absolute";
 
-gameContainer.insertBefore(enemyDiv, game);
+    // Get enemy random position to spawn
+    var enemyPosition = getEnemyRandomPosition();
+    enemyDiv.style.left = enemyPosition.minX + 'px';
+    enemyDiv.style.top = enemyPosition.minY + 'px';
+    enemies.push(enemyDiv);
+    
+    gameContainer.insertBefore(enemyDiv, game);
+  }
+}
 
 // ----- Utils -----
 
@@ -174,6 +189,28 @@ function calcGameBoundaries() {
   };
 }
 
+// Get and store all enemy portal positions
+function calcPortalPositions() {
+  var portalPositions = [];
+  for (var i = 0; i < enemyPortals.length; i++) {
+    var enemyPortalOffset = getOffset(enemyPortals[i]);
+    portalPositions.push({
+      minX: enemyPortalOffset.left,
+      maxX: enemyPortalOffset.left + enemyPortals[i].offsetWidth,
+      minY: enemyPortalOffset.top,
+      maxY: enemyPortalOffset.top + enemyPortals[i].offsetHeight,
+      centerX: enemyPortalOffset.left + (enemyPortals[i].offsetWidth / 2),
+      centerY: enemyPortalOffset.top + (enemyPortals[i].offsetHeight / 2),
+    });
+  }
+  return portalPositions;
+}
+
+// Get a random position for an enemy to spawn
+function getEnemyRandomPosition() {
+  return enemyPortalPositions[Math.floor(Math.random() * enemyPortalPositions.length)];
+}
+
 // Get if element is inside game boundaries
 function isValidPosition(left, top, element) {
   return left > gameBoundaries.minX && (left + element.offsetWidth) < gameBoundaries.maxX &&
@@ -183,7 +220,7 @@ function isValidPosition(left, top, element) {
 // Checks if a bullet collided with an enemy
 function checkEnemyCollision(bullet) {
   var collision = false;
-  var elementCollided;
+  var elementCollided, index;
 
   for (var i = 0; i < enemies.length && !collision; i++) {
     var enemy = enemies[i];
@@ -206,20 +243,22 @@ function checkEnemyCollision(bullet) {
       (bulletMaxX >= enemyMinX && bulletMaxX <= enemyMaxX && bulletMinY >= enemyMinY && bulletMinY <= enemyMaxY)) {
       collision = true;
       elementCollided = enemy;
+      index = i;
     }
   }
 
-  return collision ? elementCollided : collision;
+  return collision ? { enemy: elementCollided, enemyId: index } : collision;
 }
 
 // Damage an enemy and remove it if dead
-function damageEnemy(enemy) {
+function damageEnemy(enemyData) {
+  var enemy = enemyData.enemy;
   var enemyHealth = enemy.getAttribute(healthAttribute);
   enemyHealth--;
   if (enemyHealth == 0) {
-    var enemyId = enemy.getAttribute('id').split(enemyIdPrefix)[1];
     enemy.parentElement.removeChild(enemy);
-    enemies.splice(enemyId, 1);
+    enemies.splice(enemyData.enemyId, 1);
+    increaseScore();
   } else {
     enemy.setAttribute(healthAttribute, enemyHealth);
   }
@@ -231,4 +270,9 @@ function removeBullet(bullet, interval) {
     bullet.parentElement.removeChild(bullet);
     clearInterval(interval);
   }
+}
+
+function increaseScore() {
+  gameScore++;
+  score.innerHTML = gameScore;
 }
